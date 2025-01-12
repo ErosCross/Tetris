@@ -132,7 +132,6 @@ class Game:
         pygame.display.set_caption('TETRIS - GAME')
 
     def draw_screen(self):
-
         canvas = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
         # Define the dimensions for the game and UI portions
         game_height = int(SCREEN_HEIGHT * 0.85)  # 85% of the screen height for the game
