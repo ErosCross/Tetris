@@ -256,8 +256,8 @@ class Game:
             # Flip the display (update the screen with what we drew)
             pygame.display.flip()
 
-            # Limit FPS to 24 (or adjust for your game)
-            clock.tick(24)
+
+            clock.tick(60)
 
         # Quit Pygame after the game loop is done
         pygame.quit()
