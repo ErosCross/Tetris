@@ -11,7 +11,7 @@ pygame.font.init()
 
 # DECLARE SCREEN SIZE
 
-SCREEN_WIDTH = 1000
+SCREEN_WIDTH = 700
 SCREEN_HEIGHT = 800
 
 # Define clock for game
@@ -128,46 +128,119 @@ class StartMenu:
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        self.text_font = pygame.font.Font('../src/fonts/guardener.ttf', 100)
+        self.blocksize = 40  # Set the size of the grid block
+        self.padding = 40
+        self.box_height = 50
+        self.box_font = pygame.font.Font('../src/fonts/Gamer.ttf', 70)
+        self.header_font = pygame.font.Font('../src/fonts/ARCADE_R.TTF', 16)
         pygame.display.set_caption('TETRIS - GAME')
 
     def draw_screen(self):
+        # Create the main canvas
         canvas = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
-        # Define the dimensions for the game and UI portions
-        game_height = int(SCREEN_HEIGHT * 0.85)  # 85% of the screen height for the game
-        ui_height = SCREEN_HEIGHT - game_height  # Remaining 15% for the UI
-        # Camera rectangles for sections of the canvas
-        game_portion = pygame.Rect(0, 0, SCREEN_WIDTH, game_height)
-        ui_portion = pygame.Rect(0, game_height, SCREEN_WIDTH, ui_height)
-        # Draw game portion
-        pygame.draw.rect(canvas, (0, 128, 255), game_portion)  # Blue for the game portion
-        # Draw UI portion
-        pygame.draw.rect(canvas, (128, 128, 128), ui_portion)  # Gray for the UI portion
-        # Define dimensions and positions for the time and score boxes
-        box_width = SCREEN_WIDTH // 4  # Each box takes 1/4 of the screen width
-        box_height = ui_height - 10  # Slight padding from the top and bottom
-        padding = 10  # Padding between the boxes and screen edges
-        # Time box
-        time_box = pygame.Rect(padding, game_height + 5, box_width, box_height)
-        pygame.draw.rect(canvas, (255, 255, 255), time_box)  # White background
-        pygame.draw.rect(canvas, (0, 0, 0), time_box, 2)  # Black border
-        # Score box
-        score_box = pygame.Rect(SCREEN_WIDTH - box_width - padding, game_height + 5, box_width, box_height)
-        pygame.draw.rect(canvas, (255, 255, 255), score_box)  # White background
-        pygame.draw.rect(canvas, (0, 0, 0), score_box, 2)  # Black border
+
+        canvas.fill((90,90,90))
+
+        # define size for the UI
+
+        game_canvas = (360, int(SCREEN_HEIGHT * 0.9))
+
+        game_portion = pygame.Rect(self.padding + 10,self.padding, game_canvas[0], game_canvas[1])
+
+        next_canvas = (200, int(SCREEN_HEIGHT * 0.35))
+
+        next_portion = pygame.Rect(460, 40, next_canvas[0], next_canvas[1])
+
+        information_canvas = (200, int(SCREEN_HEIGHT * 0.5))
+
+        information_portion = pygame.Rect(460, next_canvas[1] + 80, information_canvas[0], information_canvas[1])
+
+
+
+
+
+
+
+        # Draw the ui
+        pygame.draw.rect(canvas, (25,25,25), next_portion)
+        pygame.draw.rect(canvas, (90,90,90), next_portion, 2)
+
+
+        pygame.draw.rect(canvas, (25,25,25),information_portion)
+        pygame.draw.rect(canvas, (90,90,90), information_portion, 2)
+
+
+
+        pygame.draw.rect(canvas, (25, 25, 25), game_portion)
+
+
         # Example text (replace with dynamic values)
-        font = pygame.font.Font(None, 36)  # Adjust font and size as needed
-        time_text = font.render("Time: 00:00", True, (0, 0, 0))
-        score_text = font.render("Score: 0", True, (0, 0, 0))
-        # Center the text in the boxes
+
+        time_text = self.box_font.render("00:00", True, (180,180,180))
+        score_text = self.box_font.render("00000", True, (180,180,180))
+        highscore_text = self.box_font.render("00000", True, (180,180,180))
+
+
+        # draw grid
+        self.draw_grid(canvas.subsurface(game_portion), game_canvas[0], game_canvas[1])
+
+
+        # Time Box
+        time_box = pygame.Rect(480, next_canvas[1] + 115, 160, self.box_height)
+        pygame.draw.rect(canvas, (25,25,25), time_box)
+        pygame.draw.rect(canvas, (120,120,120), time_box, 2)
+
+        # Time Header
+        time_header_text = self.header_font.render("TIME", True, (180,180,180))
+        time_header_pos = (time_box.x + (time_box.width - time_header_text.get_width()) // 2,
+                           time_box.y - time_header_text.get_height() - 5)  # Position above the box
+        canvas.blit(time_header_text, time_header_pos)
+
         canvas.blit(time_text, (time_box.x + (time_box.width - time_text.get_width()) // 2,
-                                time_box.y + (time_box.height - time_text.get_height()) // 2))
+                                time_box.y + (time_box.height - time_text.get_height()) // 2 - 5))
+
+        # Score Box
+        score_box = pygame.Rect(480, next_canvas[1] + 195, 160, self.box_height)
+        pygame.draw.rect(canvas, (25,25,25), score_box)  # White background
+        pygame.draw.rect(canvas, (120,120,120), score_box, 2)  # Black border
+
+        # Score Header
+        score_header_text = self.header_font.render("SCORE", True, (180,180,180))
+        score_header_pos = (score_box.x + (score_box.width - score_header_text.get_width()) // 2,
+                            score_box.y - score_header_text.get_height() - 5)  # Position above the box
+        canvas.blit(score_header_text, score_header_pos)
+
         canvas.blit(score_text, (score_box.x + (score_box.width - score_text.get_width()) // 2,
-                                 score_box.y + (score_box.height - score_text.get_height()) // 2))
+                                 score_box.y + (score_box.height - score_text.get_height()) // 2 - 5))
+
+        # HighScore Box
+        highscore_box = pygame.Rect(480, next_canvas[1] + 275, 160, self.box_height)
+        pygame.draw.rect(canvas, (25,25,25), highscore_box)  # White background
+        pygame.draw.rect(canvas, (120,120,120), highscore_box, 2)  # Black border
+
+        # HighScore Header
+        highscore_header_text = self.header_font.render("HIGHSCORE", True, (180,180,180))
+        highscore_header_pos = (highscore_box.x + (highscore_box.width - highscore_header_text.get_width()) // 2,
+                            highscore_box.y - highscore_header_text.get_height() - 5)  # Position above the box
+        canvas.blit(highscore_header_text, highscore_header_pos)
+
+        canvas.blit(highscore_text, (highscore_box.x + (highscore_box.width - highscore_text.get_width()) // 2,
+                                 highscore_box.y + (highscore_box.height - highscore_text.get_height()) // 2 - 5))
+
+
         # Blit the canvas to the display
         self.screen.blit(canvas, (0, 0))
 
-        # Add more game-related drawings here
+    def draw_grid(self, canvas, width, height):
+        # Calculate the adjusted width and height to avoid cut-off blocks
+        adjusted_width = (width // self.blocksize) * self.blocksize
+        adjusted_height = (height // self.blocksize) * self.blocksize
+
+        # Loop through each grid position
+        for x in range(0, adjusted_width, self.blocksize):
+            for y in range(0, adjusted_height, self.blocksize):
+                rect = pygame.Rect(x, y, self.blocksize, self.blocksize)
+                pygame.draw.rect(canvas, color=(80, 80, 80), rect=rect, width=1)
 
     def show_game(self):
         running = True
