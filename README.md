@@ -13,7 +13,17 @@ This is a simple implementation of the classic Tetris game using Python. The gam
 - Python 3.13
 - `pygame` library (for handling the graphics and game loop)
 
-To install the required libraries, run:
+## 🎮 Controls
 
-```bash
-pip install pygame
+| Action    | Key (Default)   |
+|-----------|-----------------|
+| Move Left |       `←`       |
+| Move Right|       `→`       |
+-------------------------------
+
+
+## 🚀 Installation
+
+1. **Clone this repository**:
+   ```bash
+   git clone https://github.com/ErosCross/Tetris.git
