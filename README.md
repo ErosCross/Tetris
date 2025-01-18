@@ -1,29 +1,26 @@
-# Tetris in Python
+# 🎮 Tetris in Python 🎮
 
-This is a simple implementation of the classic Tetris game using Python. The game runs in the terminal and can be played using keyboard controls.
+Welcome to the **Tetris in Python** repository! This is a classic implementation of the Tetris game built using Python and the `pygame` library. Play and challenge yourself to clear lines and score as high as possible!
 
-## Features
+![Tetris](https://upload.wikimedia.org/wikipedia/commons/e/e6/Tetris_Logo.png)
 
-- **Classic Tetris Gameplay**: The objective is to manipulate falling blocks to complete lines.
-- **Keyboard Controls**: Move, rotate, and speed up falling tetrominoes using the keyboard.
-- **Score Tracking**: The score is updated as you complete lines.
+## 🚀 Features
 
-## Requirements
+- **Classic Gameplay**: The well-known Tetris mechanics, with falling tetrominoes.
+- **Smooth Controls**: Move, rotate, and speed up the falling pieces with keyboard controls.
+- **Score Tracking**: Keep track of your highest score as you clear lines.
+- **Simple and Fun**: A minimalist but fun implementation of the game.
 
-- Python 3.13
-- `pygame` library (for handling the graphics and game loop)
+## 💻 How to Get Started
 
-## 🎮 Controls
+### Prerequisites
 
-| Action    | Key (Default)   |
-|-----------|-----------------|
-| Move Left |       `←`       |
-| Move Right|       `→`       |
--------------------------------
+Make sure you have **Python 3.x** installed on your machine.
 
+You will also need to install the `pygame` library.
 
-## 🚀 Installation
+### Install Instructions
 
-1. **Clone this repository**:
+1. **Clone the repository**:
    ```bash
-   git clone https://github.com/ErosCross/Tetris.git
+   git clone https://github.com/yourusername/tetris-python.git
