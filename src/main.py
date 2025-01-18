@@ -1,5 +1,6 @@
 import pygame, sys
-from src.objects.objects import Button
+from src.objects.objects import *
+from random import choice
 
 
 # COLOR PALETTE -> https://www.schemecolor.com/light-gray-all-the-way-color-combination.php
@@ -130,10 +131,65 @@ class Game:
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.blocksize = 40  # Set the size of the grid block
         self.padding = 40
+        self.sprites = pygame.sprite.Group()
         self.box_height = 50
         self.box_font = pygame.font.Font('../src/fonts/Gamer.ttf', 70)
         self.header_font = pygame.font.Font('../src/fonts/ARCADE_R.TTF', 16)
-        pygame.display.set_caption('TETRIS - GAME')
+        self.tetromino = Tetromino(choice(list(TETROMINOS.keys())),self.sprites, self.create_new_tetromino)
+        self.timers = {
+            'vertical move' : Timer(UPDATE_START_SPEED, True, self.move_down),
+            'horizontal move' : Timer(MOVE_WAIT_TIME)
+        }
+        self.timers['vertical move'].activate()
+
+
+    def create_new_tetromino(self):
+        self.tetromino = Tetromino(choice(list(TETROMINOS.keys())),self.sprites , self.create_new_tetromino)
+
+
+    def timer_update(self):
+        for timer in self.timers.values():
+            timer.update()
+
+    def move_down(self):
+        self.tetromino.move_down()
+
+    def game_function(self, sur):
+
+        # process input from player
+        self.input()
+
+        # update timers
+        self.timer_update()
+
+        # draw tetrominos
+        self.sprites.draw(sur)
+
+        # update movement
+        self.sprites.update()
+
+
+
+    def input(self):
+
+        keys = pygame.key.get_pressed()
+
+        if not self.timers['horizontal move'].active:
+            # MOVEMENT
+
+            if keys[pygame.K_LEFT]:
+                self.tetromino.move_horizontal(-1)
+                self.timers['horizontal move'].activate()
+
+            if keys[pygame.K_RIGHT]:
+                self.tetromino.move_horizontal(1)
+                self.timers['horizontal move'].activate()
+
+
+
+
+
+
 
     def draw_screen(self):
         # Create the main canvas
@@ -155,12 +211,6 @@ class Game:
 
         information_portion = pygame.Rect(460, next_canvas[1] + 80, information_canvas[0], information_canvas[1])
 
-
-
-
-
-
-
         # Draw the ui
         pygame.draw.rect(canvas, (25,25,25), next_portion)
         pygame.draw.rect(canvas, (90,90,90), next_portion, 2)
@@ -173,12 +223,15 @@ class Game:
 
         pygame.draw.rect(canvas, (25, 25, 25), game_portion)
 
+        self.game_function(canvas.subsurface(game_portion))
 
         # Example text (replace with dynamic values)
 
         time_text = self.box_font.render("00:00", True, (180,180,180))
         score_text = self.box_font.render("00000", True, (180,180,180))
         highscore_text = self.box_font.render("00000", True, (180,180,180))
+        return_text = self.box_font.render("RETURN", True, (212, 178, 178))
+        hovered_return_text = self.box_font.render("RETURN", True, (230, 200, 200))
 
 
         # draw grid
@@ -201,7 +254,7 @@ class Game:
 
         # Score Box
         score_box = pygame.Rect(480, next_canvas[1] + 195, 160, self.box_height)
-        pygame.draw.rect(canvas, (25,25,25), score_box)  # White background
+        pygame.draw.rect(canvas, (25,25,25), score_box)
         pygame.draw.rect(canvas, (120,120,120), score_box, 2)  # Black border
 
         # Score Header
@@ -214,8 +267,8 @@ class Game:
                                  score_box.y + (score_box.height - score_text.get_height()) // 2 - 5))
 
         # HighScore Box
-        highscore_box = pygame.Rect(480, next_canvas[1] + 275, 160, self.box_height)
-        pygame.draw.rect(canvas, (25,25,25), highscore_box)  # White background
+        highscore_box = pygame.Rect(480, next_canvas[1] + 280, 160, self.box_height)
+        pygame.draw.rect(canvas, (25,25,25), highscore_box)
         pygame.draw.rect(canvas, (120,120,120), highscore_box, 2)  # Black border
 
         # HighScore Header
@@ -227,6 +280,25 @@ class Game:
         canvas.blit(highscore_text, (highscore_box.x + (highscore_box.width - highscore_text.get_width()) // 2,
                                  highscore_box.y + (highscore_box.height - highscore_text.get_height()) // 2 - 5))
 
+
+        # return button
+        mouse_cursor = pygame.mouse.get_pos()
+        mouse_buttons = pygame.mouse.get_pressed()
+
+        return_box = pygame.Rect(472.5, next_canvas[1] + 400, 175, self.box_height)
+        pygame.draw.rect(canvas, (255, 41, 41), return_box)
+        pygame.draw.rect(canvas, (245, 83, 83), return_box, 2)  # Black border
+
+        canvas.blit(return_text, (return_box.x + (return_box.width - return_text.get_width()) // 2 + 2,
+                                     return_box.y + (return_box.height - return_text.get_height()) // 2 - 5))
+
+        # Hover effect
+        if return_box.collidepoint(mouse_cursor):
+            canvas.blit(hovered_return_text, (return_box.x + (return_box.width - return_text.get_width()) // 2 + 2,
+                                      return_box.y + (return_box.height - return_text.get_height()) // 2 - 5))
+            if mouse_buttons[0]:
+                click_sound.play()
+                self.return_back()
 
         # Blit the canvas to the display
         self.screen.blit(canvas, (0, 0))
@@ -241,6 +313,13 @@ class Game:
             for y in range(0, adjusted_height, self.blocksize):
                 rect = pygame.Rect(x, y, self.blocksize, self.blocksize)
                 pygame.draw.rect(canvas, color=(80, 80, 80), rect=rect, width=1)
+
+
+    def return_back(self):
+        # Create an instance of the Game class and start the game
+        menu = StartMenu()  # Create an instance of StartMenu
+        menu.show_menu()
+
 
     def show_game(self):
         running = True
