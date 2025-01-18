@@ -15,7 +15,7 @@ Welcome to the **Tetris in Python** repository! This is a classic implementation
 
 ### Prerequisites
 
-Make sure you have **Python 3.x** installed on your machine.
+Make sure you have **Python 3.13** installed on your machine.
 
 You will also need to install the `pygame` library.
 
