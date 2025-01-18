@@ -112,7 +112,6 @@ class Tetromino:
         self.blocks = [Block(group,pos,self.color) for pos in self.block_positions]
 
         # new tetromino
-
         self.create_new_tetromino = create_new_tetromino
 
     # collisions
