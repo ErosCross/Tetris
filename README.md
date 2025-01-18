@@ -23,4 +23,4 @@ You will also need to install the `pygame` library.
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/yourusername/tetris-python.git
+   git clone https://github.com/yourusername/tetris.git
