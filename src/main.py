@@ -129,13 +129,18 @@ class StartMenu:
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.score = 0
         self.blocksize = 40  # Set the size of the grid block
         self.padding = 40
         self.sprites = pygame.sprite.Group()
         self.box_height = 50
         self.box_font = pygame.font.Font('../src/fonts/Gamer.ttf', 70)
         self.header_font = pygame.font.Font('../src/fonts/ARCADE_R.TTF', 16)
-        self.tetromino = Tetromino(choice(list(TETROMINOS.keys())),self.sprites, self.create_new_tetromino)
+        self.field_data = [[0 for x in range(COLUMNS)] for y in range(ROWS)]
+        self.tetromino = Tetromino(
+            choice(list(TETROMINOS.keys()))
+
+            ,self.sprites, self.create_new_tetromino,self.field_data)
         self.timers = {
             'vertical move' : Timer(UPDATE_START_SPEED, True, self.move_down),
             'horizontal move' : Timer(MOVE_WAIT_TIME)
@@ -144,7 +149,41 @@ class Game:
 
 
     def create_new_tetromino(self):
-        self.tetromino = Tetromino(choice(list(TETROMINOS.keys())),self.sprites , self.create_new_tetromino)
+
+        self.check_finished_rows()
+        self.tetromino = Tetromino(
+             choice(list(TETROMINOS.keys()))
+
+            , self.sprites, self.create_new_tetromino, self.field_data)
+
+
+    def check_finished_rows(self):
+
+        # get the full row indexes
+        delete_rows = []
+        for i,row in enumerate(self.field_data):
+            if all(row):
+                delete_rows.append(i)
+
+        if delete_rows:
+            for delete_row in delete_rows:
+                for block in self.field_data[delete_row]:
+                    block.kill()
+
+
+
+                # move down
+                for row in self.field_data:
+                    for block in row:
+                        if block and block.pos.y < delete_row:
+                            block.pos.y +=1
+
+                # rebuild the field data
+                self.field_data = [[0 for x in range(COLUMNS)] for y in range(ROWS)]
+                for block in self.sprites:
+                    self.field_data[int(block.pos.y)][int(block.pos.x)] = block
+
+
 
 
     def timer_update(self):
