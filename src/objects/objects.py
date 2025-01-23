@@ -1,6 +1,9 @@
 import pygame
+from pygame.image import load
+from os import path
 
 
+pygame.mixer.init()  # Initialize the mixer module.
 
 CELL_SIZE = 40
 SCREEN_WIDTH = 700
@@ -16,12 +19,20 @@ PURPLE = '#7b217f'
 CYAN = '#6cc6d9'
 ORANGE = '#f07e13'
 GRAY = '#1C1C1C'
-LINE_COLOR = '#FFFFFF'
 
 # game behaviour
-UPDATE_START_SPEED = 500
-MOVE_WAIT_TIME = 300
+UPDATE_START_SPEED = 400
+MOVE_WAIT_TIME = 200
 ROTATE_WAIT_TIME = 200
+
+# sounds
+
+LANDING_SOUND = pygame.mixer.Sound('../src/sounds/landing.wav')  # Load the landing sound
+
+
+# adjusting volume
+
+LANDING_SOUND.set_volume(0.1)
 
 # grid
 
@@ -70,8 +81,6 @@ class Button:
 
 
 
-
-
 class Block(pygame.sprite.Sprite):
     def __init__(self, group , pos, color):
         # general
@@ -99,6 +108,13 @@ class Block(pygame.sprite.Sprite):
         if y >= 0 and field_data[y][int(self.pos.x)]:
             return True
 
+    def rotate(self , pivot_pos):
+        # rotate one block for rotation
+        distance = self.pos - pivot_pos
+        rotated = distance.rotate(90)
+        new_pos = pivot_pos + rotated
+        return new_pos
+
 
 
 
@@ -111,6 +127,7 @@ class Tetromino:
         self.block_positions = TETROMINOS[shape]['shape']
         self.color = TETROMINOS[shape]['color']
         self.field_data = field_data
+        self.shape = shape
         #create blocks
 
         self.blocks = [Block(group,pos,self.color) for pos in self.block_positions]
@@ -137,6 +154,7 @@ class Tetromino:
                 block.pos.y += 1
         else:
             for block in self.blocks:
+                LANDING_SOUND.play()
                 self.field_data[int(block.pos.y)][int(block.pos.x)] = block
             self.create_new_tetromino()
 
@@ -146,6 +164,38 @@ class Tetromino:
             # If no collision, move all blocks by the specified amount
             for block in self.blocks:
                 block.pos.x += amount
+
+
+    def rotate(self):
+        # Rotate tetromino
+        if self.shape != 'O':
+            # Take the position to rotate on
+            pivot_pos = self.blocks[0].pos
+
+            new_block_positions = [block.rotate(pivot_pos) for block in self.blocks]
+
+            # ensure that we are not outside the boundries
+
+            for pos in new_block_positions:
+                # horizontal
+                if pos.x < 0 or pos.x >= COLUMNS:
+                    return
+
+                # vertical / floor check
+
+                if pos.y >= ROWS:
+                    return
+                # field check - > collision with other pieces
+
+                if self.field_data[int(pos.y)][int(pos.x)]:
+                    return
+
+
+            # apply for all the blocks
+
+            for i,block in enumerate(self.blocks):
+                block.pos = new_block_positions[i]
+
 
 
 
@@ -181,6 +231,9 @@ class Timer:
             # repeat the timer
             if self.repeated:
                 self.activate()
+
+
+
 
 
 
