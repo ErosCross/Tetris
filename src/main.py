@@ -17,19 +17,20 @@ SCREEN_HEIGHT = 800
 clock = pygame.time.Clock()
 
 # Set the window icon
-icon = pygame.image.load('../src/images/game-icon.png')
+icon = pygame.image.load('images/game-icon.png')
 pygame.display.set_icon(icon)
 
 # Load sound effect for button clicks
 click_sound = pygame.mixer.Sound('sounds/button_pressed.wav')
+game_over_sound = pygame.mixer.Sound('sounds/gameover.wav')
 
 class StartMenu:
     def __init__(self):
         # Initialize the start menu screen
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        self.header_font = pygame.font.Font('../src/fonts/Gamer.ttf', 200)  # Main header font
+        self.header_font = pygame.font.Font('fonts/Gamer.ttf', 200)  # Main header font
 
-        self.button_font = pygame.font.Font('../src/fonts/Gamer.ttf', 90)  # Button font
+        self.button_font = pygame.font.Font('fonts/Gamer.ttf', 90)  # Button font
         pygame.display.set_caption('TETRIS - BY AMIT SHAVIV')  # Set the game window title
 
     def draw_text(self, mytext):
@@ -113,6 +114,8 @@ class StartMenu:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:  # Handle quit event
                     running = False
+                    pygame.quit()  # Quit pygame after exiting the loop
+                    sys.exit()  # Exit the program
 
             # Draw the menu screen
             self.draw_screen()
@@ -146,8 +149,8 @@ class Game:
         self.elapsed_time = 0  # Initialize elapsed time
 
         # Load fonts for UI text
-        self.box_font = pygame.font.Font('../src/fonts/Gamer.ttf', 70)
-        self.header_font = pygame.font.Font('../src/fonts/ARCADE_R.TTF', 16)
+        self.box_font = pygame.font.Font('fonts/Gamer.ttf', 70)
+        self.header_font = pygame.font.Font('fonts/ARCADE_R.TTF', 16)
         # shapes
 
         self.next_shapes = choice(list(TETROMINOS.keys()))
@@ -156,8 +159,7 @@ class Game:
         self.field_data = [[0 for x in range(COLUMNS)] for y in range(ROWS)]
 
         # shapes previews
-
-        self.shape_surfaces = {shape: load(path.join('..', 'src','images', 'graphics', f'{shape}.png')).convert_alpha() for
+        self.shape_surfaces = {shape: load(path.join('..', 'src', 'images', 'graphics', f'{shape}.png')).convert_alpha() for
                                shape
                                in TETROMINOS.keys()}
 
@@ -179,6 +181,7 @@ class Game:
         self.timers['vertical move'].activate()  # Activate the vertical movement timer
 
 
+
     def display_stopwatch(self):
         # Convert elapsed time (in milliseconds) to seconds and minutes
         seconds = self.elapsed_time // 1000
@@ -187,7 +190,6 @@ class Game:
         # Format time
         time_string = f"{minutes:02}:{seconds:02}"
         return time_string
-
 
     def get_next_shape(self):
         # get next shape
@@ -198,6 +200,10 @@ class Game:
     def create_new_tetromino(self):
         # Create a new Tetromino after the current one is placed
         self.check_finished_rows()  # Check and clear completed rows
+        if self.check_if_lost():
+            self.game_over()
+
+
         self.tetromino = Tetromino(
             self.get_next_shape(),
             self.sprites,
@@ -205,28 +211,42 @@ class Game:
             self.field_data
         )
 
+
+    def game_over(self):
+        menu = GameOverMenu()  # Create an instance of Gamer over
+        menu.show_menu()
+
     def check_finished_rows(self):
-        # Check for and clear any completed rows in the game grid
-        delete_rows = []  # List to store indices of completed rows
-        for i, row in enumerate(self.field_data):
-            if all(row):  # If all blocks in a row are filled
-                delete_rows.append(i)
+            # Check for and clear any completed rows in the game grid
+            delete_rows = []  # List to store indices of completed rows
+            for i, row in enumerate(self.field_data):
+                if all(row):  # If all blocks in a row are filled
+                    delete_rows.append(i)
 
-        if delete_rows:
-            for delete_row in delete_rows:
-                for block in self.field_data[delete_row]:
-                    block.kill()  # Remove blocks in the completed row
 
-                # Move blocks above the completed row down
-                for row in self.field_data:
-                    for block in row:
-                        if block and block.pos.y < delete_row:
-                            block.pos.y += 1
+            if delete_rows:
+                for delete_row in delete_rows:
+                    for block in self.field_data[delete_row]:
+                        block.kill()  # Remove blocks in the completed row
 
-                # Rebuild the field data
-                self.field_data = [[0 for x in range(COLUMNS)] for y in range(ROWS)]
-                for block in self.sprites:
-                    self.field_data[int(block.pos.y)][int(block.pos.x)] = block
+                    # Move blocks above the completed row down
+                    for row in self.field_data:
+                        for block in row:
+                            if block and block.pos.y < delete_row:
+                                block.pos.y += 1
+
+                    # Rebuild the field data
+                    self.field_data = [[0 for x in range(COLUMNS)] for y in range(ROWS)]
+                    for block in self.sprites:
+                        self.field_data[int(block.pos.y)][int(block.pos.x)] = block
+                    # Add score to the user
+                    self.calc_score()
+
+    def check_if_lost(self):
+        # Check if player can place more tetrominos
+        if self.field_data[int(BLOCK_OFFSET.y)][int(BLOCK_OFFSET.x)]:
+            return True
+
 
 
     def timer_update(self):
@@ -249,6 +269,9 @@ class Game:
         self.sprites.update()  # Update movement for all sprites
         self.display_next_tetromino(preview_surface) # Show the next Tetromino
 
+    def calc_score(self):
+        # Add score to our Score_Addition
+        self.score += SCORE_ADDITION
 
 
     def display_next_tetromino(self, sur):
@@ -308,7 +331,7 @@ class Game:
 
         # creating the texts on the screen
         time_text = self.box_font.render(self.display_stopwatch(), True, (180, 180, 180))
-        score_text = self.box_font.render("00000", True, (180, 180, 180))
+        score_text = self.box_font.render(str(self.score), True, (180, 180, 180))
         highscore_text = self.box_font.render("00000", True, (180, 180, 180))
         return_text = self.box_font.render("RETURN", True, (212, 178, 178))
 
@@ -398,8 +421,10 @@ class Game:
 
     def return_back(self):
         # Handle return to the main menu
+        self.cleanup()  # Clean up any active tasks when the window is closed
         menu = StartMenu()  # Create an instance of StartMenu
         menu.show_menu()
+
 
     def show_game(self):
         # Main game loop
@@ -408,12 +433,170 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:  # Quit the game if the close button is clicked
                     running = False
+                    self.cleanup()  # Clean up any active tasks when the window is closed
+                    # Clean up and quit
+                    pygame.quit()  # This will uninitialize all pygame modules
+                    sys.exit()  # Exit the program
 
             self.draw_screen()  # Draw the game screen
             pygame.display.flip()  # Update the display
             clock.tick(60)  # Maintain 60 FPS
 
-        pygame.quit()  # Quit Pygame after the game loop
+
+
+    def cleanup(self):
+        # Stop any active sounds
+        pygame.mixer.stop()  # Stop all music and sound effects
+
+        # Deactivate timers if necessary
+        for timer in self.timers.values():
+            timer.deactivate()
+
+
+
+
+        # Add any other cleanup operations you might need here (like stopping background processes)
+        # For example, if you have threads or other running operations, they should be terminated
+        print("Cleanup complete. All processes stopped.")
+
+
+class GameOverMenu:
+    def __init__(self):
+        # Initialize the start menu screen
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.header_font = pygame.font.Font('fonts/Gamer.ttf', 170)  # Main header font
+        self.button_font = pygame.font.Font('fonts/Gamer.ttf', 80)  # Button font
+        self.fade = True # fade in first true then false!
+        pygame.display.set_caption('TETRIS')  # Set the game window title
+
+    def draw_text(self, mytext):
+        # Render the main title text
+        text = self.header_font.render(mytext, True, (220, 10, 10))  # text
+
+        # Position the text in the center of the screen
+        text_rect = text.get_rect(center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 250))
+
+        self.screen.blit(text, text_rect)
+
+    def render_button(self, text, font, color, center_position):
+        # Helper method to render button text and return its position
+        button_text = font.render(text, True, color)
+        button_rect = button_text.get_rect(center=center_position)
+        return button_text, button_rect
+
+    def draw_buttons(self):
+        # Render the menu buttons and handle their interactions
+        mouse_cursor = pygame.mouse.get_pos()  # Get mouse cursor position
+        mouse_buttons = pygame.mouse.get_pressed()  # Check if mouse buttons are pressed
+
+        # Define button positions and their properties
+        try_again_button_center = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 100)
+        return_button_center = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+
+
+        buttons = [
+            {"text": "TRY AGAIN", "center": try_again_button_center, "color": (180, 180, 180),"hover_color": (47, 79, 79)},
+            {"text": "MAIN MENU", "center": return_button_center, "color": (180, 180, 180), "hover_color": (47, 79, 79)}
+
+
+
+        ]
+        # Loop through all buttons and render them
+        for button in buttons:
+            # Render button text and rectangle
+            text, rect = self.render_button(button["text"], self.button_font, button["color"], button["center"])
+
+
+            # Check if the mouse is hovering over the button
+            if rect.collidepoint(mouse_cursor):
+                # Change button color on hover
+                text, rect = self.render_button(button["text"], self.button_font, button["hover_color"],
+                                                button["center"])
+
+                # Play a click sound and handle button functionality when clicked
+                if mouse_buttons[0]:  # Left mouse button is clicked
+                    click_sound.play()
+
+                    # Handle the return to main menu button
+                    if button["text"] == "MAIN MENU":
+                        pygame.time.delay(100)  # Add a small delay
+                        self.return_main_menu()
+
+                    # Handle the TRY AGAIN button
+                    if button["text"] == "TRY AGAIN":
+                        self.restart_game()
+
+            # Draw the button text
+            self.screen.blit(text, rect)
+
+
+    def draw_screen(self):
+        # Set the background color to gray
+        self.screen.fill((25, 25, 25))  # Gray background
+        self.draw_buttons()
+
+    def fade_out(self, duration=2):
+        # Create a surface for fade effect (black)
+        fade_surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        fade_surface.fill((0, 0, 0))  # Black color
+
+        # The fade-out effect
+        for alpha in range(255, -1, -5):  # Start from 255 (opaque) and decrease to 0 (transparent)
+            fade_surface.set_alpha(alpha)  # Change opacity
+            self.screen.fill((25, 25, 25))  # Draw the background
+            self.draw_buttons()
+            self.draw_text("GAME OVER!")  # Draw the title text
+            self.screen.blit(fade_surface, (0, 0))  # Overlay the fade surface
+            pygame.display.flip()
+            pygame.time.delay(int(duration * 10))  # Adjust the delay for smoother fading
+
+    def show_menu(self):
+        # Main loop for displaying the start menu
+        running = True
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:  # Handle quit event
+                    running = False
+                    # Clean up and quit
+                    pygame.quit()  # This will uninitialize all pygame modules
+                    sys.exit()  # Exit the program
+
+            # Apply the fade-in effect
+            if self.fade:
+                game_over_sound.play()
+                pygame.time.delay(100)  # Add a small delay
+                self.fade_out(duration=2)
+                self.fade = False
+
+            # Draw the menu screen
+            self.draw_screen()
+
+            self.draw_text('GAME OVER!')
+
+
+            # Update the display
+            pygame.display.flip()
+
+            # Cap the frame rate to 60 FPS
+            clock.tick(60)
+
+
+
+    def restart_game(self):
+        # Start the main game by creating an instance of the Game class
+        game = Game()
+        game.show_game()
+
+    def return_main_menu(self):
+        # Start the main menu by creating an instance of the Game class
+        menu = StartMenu()
+        menu.show_menu()
+
+
+
+
+
+
 
 
 # Main function to start the game
