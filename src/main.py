@@ -17,12 +17,14 @@ SCREEN_HEIGHT = 800
 clock = pygame.time.Clock()
 
 # Set the window icon
-icon = pygame.image.load('images/game-icon.png')
+# icon = pygame.image.load('images/game-icon.png')
+icon = pygame.image.load('images/shrektetrisreal.png')
 pygame.display.set_icon(icon)
 
 # Load sound effect for button clicks
 click_sound = pygame.mixer.Sound('sounds/button_pressed.wav')
 game_over_sound = pygame.mixer.Sound('sounds/gameover.wav')
+music = pygame.mixer.Sound('sounds/music.wav')
 
 class StartMenu:
     def __init__(self):
@@ -99,6 +101,10 @@ class StartMenu:
                     if button["text"] == "START":
                         self.start_game()
 
+                    # Handle the OPTIONS button
+                    if button["text"] == "OPTIONS":
+                        self.start_options()
+
             # Draw the button text
             self.screen.blit(text, rect)
 
@@ -133,6 +139,10 @@ class StartMenu:
         # Start the main game by creating an instance of the Game class
         game = Game()
         game.show_game()
+
+    def start_options(self):
+        options = OptionsMenu()
+        options.show_menu()
 
 class Game:
     def __init__(self):
@@ -593,6 +603,154 @@ class GameOverMenu:
         menu.show_menu()
 
 
+
+class OptionsMenu:
+    def __init__(self):
+        """Initialize the options menu."""
+        self.screen =  pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        #self.settings = Settings()  # Settings object to control game settings (volume, difficulty, etc.)
+        self.click_sound = click_sound  # Sound to play on button click
+        self.clock = clock  # To control the frame rate
+
+        self.header_font = pygame.font.Font('fonts/Gamer.ttf', 200)  # Main header font
+        self.button_font = pygame.font.Font('fonts/Gamer.ttf', 90)  # Button font
+        pygame.display.set_caption('TETRIS - BY AMIT SHAVIV')  # Set the game window title
+
+    def render_button(self, text, font, color, center_position):
+        """Render button text and return its surface and rectangle."""
+        button_text = font.render(text, True, color)
+        button_rect = button_text.get_rect(center=center_position)
+        return button_text, button_rect
+
+    def draw_text(self, mytext):
+        """Render the main title text."""
+        text = self.header_font.render(mytext, True, (180, 180, 180))
+        text_rect = text.get_rect(center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 250))
+
+        # Draw a line below the text
+        line_start_x = SCREEN_WIDTH / 2 - text.get_width() / 2
+        line_end_x = SCREEN_WIDTH / 2 + text.get_width() / 2
+        line_y = text_rect.bottom
+
+        pygame.draw.line(self.screen, (45, 45, 45), (line_start_x, line_y), (line_end_x, line_y), 2)
+        self.screen.blit(text, text_rect)
+
+    def draw_volume_slider(self):
+        """Draw the volume slider to adjust music volume"""
+        slider_width = 400
+        slider_height = 10
+        slider_x = (SCREEN_WIDTH / 2) - (slider_width / 2)
+        slider_y = SCREEN_HEIGHT / 2 + 50
+
+        # Draw the background slider bar (inactive)
+        pygame.draw.rect(self.screen, (100, 100, 100), (slider_x, slider_y, slider_width, slider_height))
+
+        # Draw the active part of the slider bar based on current volume
+        active_width = slider_width * self.settings.volume
+        pygame.draw.rect(self.screen, (0, 255, 0), (slider_x, slider_y, active_width, slider_height))
+
+        # Draw the handle (circle) on the slider
+        handle_radius = 15
+        handle_x = slider_x + active_width
+        pygame.draw.circle(self.screen, (255, 0, 0), (handle_x, slider_y + slider_height // 2), handle_radius)
+
+    def draw_buttons(self):
+        """Render the menu buttons and handle their interactions"""
+        mouse_cursor = pygame.mouse.get_pos()  # Get mouse cursor position
+        mouse_buttons = pygame.mouse.get_pressed()  # Check if mouse buttons are pressed
+
+        # Define button positions and their properties
+        return_button_center = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 200)
+        buttons = [
+            {"text": "RETURN BACK", "center": return_button_center, "color": (180, 180, 180),
+             "hover_color": (47, 79, 79)}
+        ]
+
+        # Loop through all buttons and render them
+        for button in buttons:
+            text, rect = self.render_button(button["text"], self.button_font, button["color"], button["center"])
+
+            # Check if the mouse is hovering over the button
+            if rect.collidepoint(mouse_cursor):
+                # Change button color on hover
+                text, rect = self.render_button(button["text"], self.button_font, button["hover_color"],
+                                                button["center"])
+
+                # Play a click sound and handle button functionality when clicked
+                if mouse_buttons[0]:  # Left mouse button is clicked
+                    click_sound.play()
+                    if button["text"] == "RETURN BACK":
+                        self.return_back()
+
+            # Draw the button text
+            self.screen.blit(text, rect)
+
+    def handle_slider_interaction(self):
+        """Update volume based on mouse position on the slider"""
+        mouse_cursor = pygame.mouse.get_pos()
+        mouse_buttons = pygame.mouse.get_pressed()
+
+        # Define slider area (as in draw_volume_slider method)
+        slider_width = 400
+        slider_x = (SCREEN_WIDTH / 2) - (slider_width / 2)
+        slider_y = SCREEN_HEIGHT / 2 + 50
+        slider_rect = pygame.Rect(slider_x, slider_y, slider_width, 10)
+
+        if slider_rect.collidepoint(mouse_cursor) and mouse_buttons[0]:  # If mouse is over the slider and clicked
+            # Calculate the new volume based on mouse position on the slider
+            mouse_x = mouse_cursor[0]
+            new_volume = (mouse_x - slider_x) / slider_width
+            new_volume = max(0.0, min(new_volume, 1.0))  # Ensure the value stays between 0 and 1
+            #self.settings.adjust_volume(new_volume)
+
+    def draw_screen(self):
+        """Draw the menu screen."""
+        self.screen.fill((25, 25, 25))  # Gray background
+        self.draw_buttons()
+        self.draw_volume_slider()
+
+    def show_menu(self):
+        """Main loop for displaying the options menu."""
+        running = True
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:  # Handle quit event
+                    running = False
+                    pygame.quit()  # Quit pygame after exiting the loop
+                    sys.exit()  # Exit the program
+
+            # Draw the menu screen
+            self.draw_screen()
+            self.draw_text("OPTIONS")  # Draw the title text
+
+            # Update the display
+            pygame.display.flip()
+
+            # Cap the frame rate to 60 FPS
+            self.clock.tick(60)
+
+        pygame.quit()  # Quit pygame after exiting the loop
+
+    def return_back(self):
+        """Return to the main menu."""
+
+        menu = StartMenu()
+        menu.show_menu()
+
+    def adjust_music_volume(self):
+        """Adjust the music volume."""
+        new_volume = self.settings.volume + 0.1 if self.settings.volume < 1.0 else 0.0
+        self.settings.adjust_volume(new_volume)
+
+    def adjust_sfx_volume(self):
+        """Adjust the sound effects volume."""
+        new_sfx_volume = self.settings.sound_effects_volume + 0.1 if self.settings.sound_effects_volume < 1.0 else 0.0
+        self.settings.adjust_sound_effects_volume(new_sfx_volume)
+
+    def change_difficulty(self):
+        """Change the game difficulty."""
+        new_difficulty = self.settings.difficulty + 1 if self.settings.difficulty < 5 else 1
+        self.settings.set_difficulty(new_difficulty)
 
 
 

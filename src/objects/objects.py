@@ -1,6 +1,7 @@
 import pygame
 from pygame.image import load
 from os import path
+import pickle
 
 
 pygame.mixer.init()  # Initialize the mixer module.
@@ -235,6 +236,79 @@ class Timer:
             if self.repeated:
                 self.activate()
 
+
+import pygame
+import pickle
+
+
+import pygame
+import pickle
+
+class Settings:
+    def __init__(self):
+        # Initialize the pygame mixer
+        pygame.mixer.init()
+
+        # Set default values
+        self.volume = 0.5
+        self.sound_effects_enabled = True  # Set to True to enable sound effects, False to disable
+        self.difficulty = 3  # Default difficulty is 3 (out of 5)
+
+        # Set the music volume
+        pygame.mixer.music.set_volume(self.volume)
+
+        # Example sound effect (optional - you can load your own sound effects)
+        #self.sound_effect = pygame.mixer.Sound("your_sound_effect_file.wav")
+
+    def adjust_volume(self, volume_level):
+        """Adjust the music volume level. Volume level should be between 0.0 and 1.0."""
+        if 0.0 <= volume_level <= 1.0:
+            self.volume = volume_level
+            pygame.mixer.music.set_volume(self.volume)
+            print(f"Music Volume set to {self.volume * 100}%")
+        else:
+            print("Volume level must be between 0.0 and 1.0.")
+
+    def toggle_sound_effects(self):
+        """Toggle sound effects on or off."""
+        self.sound_effects_enabled = not self.sound_effects_enabled
+        state = "enabled" if self.sound_effects_enabled else "disabled"
+        print(f"Sound Effects {state}")
+
+    def set_difficulty(self, difficulty_level):
+        """Set the difficulty level. Difficulty level should be between 1 and 5."""
+        if 1 <= difficulty_level <= 5:
+            self.difficulty = difficulty_level
+            print(f"Difficulty set to {self.difficulty}")
+        else:
+            print("Difficulty level must be between 1 and 5.")
+
+    def save_settings(self, filename="settings.pkl"):
+        """Export settings to a binary pickle file."""
+        settings_dict = {
+            "volume": self.volume,
+            "sound_effects_enabled": self.sound_effects_enabled,
+            "difficulty": self.difficulty
+        }
+
+        with open(filename, "wb") as f:
+            pickle.dump(settings_dict, f)
+        print(f"Settings saved to {filename}")
+
+    def load_settings(self, filename="settings.pkl"):
+        """Load settings from a pickle file."""
+        try:
+            with open(filename, "rb") as f:
+                settings_dict = pickle.load(f)
+                self.volume = settings_dict.get("volume", 0.5)
+                self.sound_effects_enabled = settings_dict.get("sound_effects_enabled", True)
+                self.difficulty = settings_dict.get("difficulty", 3)
+
+                pygame.mixer.music.set_volume(self.volume)
+
+                print(f"Settings loaded. Volume: {self.volume * 100}%, Sound Effects: {'Enabled' if self.sound_effects_enabled else 'Disabled'}, Difficulty: {self.difficulty}")
+        except FileNotFoundError:
+            print(f"No settings file found. Using default values: Volume {self.volume * 100}%, Sound Effects: {'Enabled' if self.sound_effects_enabled else 'Disabled'}, Difficulty: {self.difficulty}")
 
 
 
