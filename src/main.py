@@ -607,14 +607,17 @@ class GameOverMenu:
 class OptionsMenu:
     def __init__(self):
         """Initialize the options menu."""
-        self.screen =  pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        #self.settings = Settings()  # Settings object to control game settings (volume, difficulty, etc.)
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.settings = Settings()  # Settings object to control game settings (volume, difficulty, etc.)
         self.click_sound = click_sound  # Sound to play on button click
         self.clock = clock  # To control the frame rate
-
         self.header_font = pygame.font.Font('fonts/Gamer.ttf', 200)  # Main header font
-        self.button_font = pygame.font.Font('fonts/Gamer.ttf', 90)  # Button font
+        self.button_font = pygame.font.Font('fonts/Gamer.ttf', 60)  # Button font
+
         pygame.display.set_caption('TETRIS - BY AMIT SHAVIV')  # Set the game window title
+
+        # Initialize the slider
+        self.volume_slider = Slider(x=(SCREEN_WIDTH / 2) - 200, y=SCREEN_HEIGHT / 2 + 50, width=400, height=10, initial_value=self.settings.volume , label = "Music Volume")
 
     def render_button(self, text, font, color, center_position):
         """Render button text and return its surface and rectangle."""
@@ -635,27 +638,8 @@ class OptionsMenu:
         pygame.draw.line(self.screen, (45, 45, 45), (line_start_x, line_y), (line_end_x, line_y), 2)
         self.screen.blit(text, text_rect)
 
-    def draw_volume_slider(self):
-        """Draw the volume slider to adjust music volume"""
-        slider_width = 400
-        slider_height = 10
-        slider_x = (SCREEN_WIDTH / 2) - (slider_width / 2)
-        slider_y = SCREEN_HEIGHT / 2 + 50
-
-        # Draw the background slider bar (inactive)
-        pygame.draw.rect(self.screen, (100, 100, 100), (slider_x, slider_y, slider_width, slider_height))
-
-        # Draw the active part of the slider bar based on current volume
-        active_width = slider_width * self.settings.volume
-        pygame.draw.rect(self.screen, (0, 255, 0), (slider_x, slider_y, active_width, slider_height))
-
-        # Draw the handle (circle) on the slider
-        handle_radius = 15
-        handle_x = slider_x + active_width
-        pygame.draw.circle(self.screen, (255, 0, 0), (handle_x, slider_y + slider_height // 2), handle_radius)
-
     def draw_buttons(self):
-        """Render the menu buttons and handle their interactions"""
+        """Render the menu buttons and handle their interactions."""
         mouse_cursor = pygame.mouse.get_pos()  # Get mouse cursor position
         mouse_buttons = pygame.mouse.get_pressed()  # Check if mouse buttons are pressed
 
@@ -685,29 +669,18 @@ class OptionsMenu:
             # Draw the button text
             self.screen.blit(text, rect)
 
-    def handle_slider_interaction(self):
-        """Update volume based on mouse position on the slider"""
-        mouse_cursor = pygame.mouse.get_pos()
-        mouse_buttons = pygame.mouse.get_pressed()
+    def handle_slider_interaction(self, mouse_cursor, mouse_buttons):
+        """Update volume based on mouse position on the slider."""
+        self.volume_slider.render(self.screen, mouse_cursor, mouse_buttons[0])
 
-        # Define slider area (as in draw_volume_slider method)
-        slider_width = 400
-        slider_x = (SCREEN_WIDTH / 2) - (slider_width / 2)
-        slider_y = SCREEN_HEIGHT / 2 + 50
-        slider_rect = pygame.Rect(slider_x, slider_y, slider_width, 10)
-
-        if slider_rect.collidepoint(mouse_cursor) and mouse_buttons[0]:  # If mouse is over the slider and clicked
-            # Calculate the new volume based on mouse position on the slider
-            mouse_x = mouse_cursor[0]
-            new_volume = (mouse_x - slider_x) / slider_width
-            new_volume = max(0.0, min(new_volume, 1.0))  # Ensure the value stays between 0 and 1
-            #self.settings.adjust_volume(new_volume)
+        # Optionally, update the volume in the settings object if required
+        self.settings.volume = self.volume_slider.get_value()
 
     def draw_screen(self):
         """Draw the menu screen."""
         self.screen.fill((25, 25, 25))  # Gray background
         self.draw_buttons()
-        self.draw_volume_slider()
+        self.handle_slider_interaction(pygame.mouse.get_pos(), pygame.mouse.get_pressed())  # Handle slider interactions
 
     def show_menu(self):
         """Main loop for displaying the options menu."""
@@ -733,7 +706,6 @@ class OptionsMenu:
 
     def return_back(self):
         """Return to the main menu."""
-
         menu = StartMenu()
         menu.show_menu()
 
@@ -751,6 +723,7 @@ class OptionsMenu:
         """Change the game difficulty."""
         new_difficulty = self.settings.difficulty + 1 if self.settings.difficulty < 5 else 1
         self.settings.set_difficulty(new_difficulty)
+
 
 
 

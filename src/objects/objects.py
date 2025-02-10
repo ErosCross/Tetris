@@ -84,6 +84,55 @@ class Button:
         screen.blit(self.rendered_text, self.rect)
 
 
+class Slider:
+    def __init__(self, x, y, width=400, height=10, initial_value=0.5, min_value=0.0, max_value=1.0, label = None):
+        """Initialize the slider with its position, size, and initial value."""
+        self.rect = pygame.Rect(x, y, width, height)
+        self.value = initial_value  # Current value of the slider (between min_value and max_value)
+        self.min_value = min_value  # Minimum value of the slider
+        self.max_value = max_value  # Maximum value of the slider
+        self.handle_radius = 10  # Radius of the slider handle (circle)
+        self.handle_x = self.rect.left + self.value * self.rect.width  # Position of the slider handle
+        self.header_pos = [x ,y - 45] # calculating header position
+        self.header_text = label # header text
+        self.header_font = pygame.font.Font('fonts/Gamer.ttf', 40)
+
+
+    def draw_header(self , screen):
+        """Render the header text"""
+        # draw the text above the slider
+        text = self.header_font.render(self.header_text, True, (180, 180, 180))
+        text_rect = text.get_rect(x=self.header_pos[0] , y=self.header_pos[1])
+        screen.blit(text, text_rect)
+
+    def render(self, screen, mouse_cursor, mouse_pressed):
+        """Render the slider and handle mouse interaction."""
+        # Draw the background slider bar (inactive)
+        pygame.draw.rect(screen, (100, 100, 100), self.rect)
+
+        # Draw the active part of the slider bar based on the current value
+        active_width = self.rect.width * self.value
+        pygame.draw.rect(screen, (255, 255, 250), (self.rect.left, self.rect.top, active_width, self.rect.height))
+
+        # Handle interaction when mouse is clicked or dragged
+        if self.rect.collidepoint(mouse_cursor) and mouse_pressed:
+            # Calculate the new value based on mouse position on the slider
+            new_value = (mouse_cursor[0] - self.rect.left) / self.rect.width
+            self.value = max(self.min_value, min(new_value, self.max_value))  # Ensure the value stays within bounds
+
+        # Recalculate handle position based on the current value
+        self.handle_x = self.rect.left + self.value * self.rect.width
+
+        # Render the header text
+        self.draw_header(screen)
+
+        # Draw the handle (circle)
+        pygame.draw.circle(screen, (255, 0, 0), (int(self.handle_x), self.rect.centery), self.handle_radius)
+
+    def get_value(self):
+        """Get the current value of the slider."""
+        return self.value
+
 
 class Block(pygame.sprite.Sprite):
     def __init__(self, group , pos, color):
