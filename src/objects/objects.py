@@ -1,4 +1,5 @@
 import pygame
+import os
 from pygame.image import load
 from os import path
 import pickle
@@ -25,7 +26,7 @@ ORANGE = '#f07e13'
 GRAY = '#1C1C1C'
 
 # game behaviour
-UPDATE_START_SPEED = 200 # 400
+UPDATE_START_SPEED = 400 # 400
 MOVE_WAIT_TIME = 200
 ROTATE_WAIT_TIME = 200
 
@@ -85,10 +86,11 @@ class Button:
 
 
 class Slider:
-    def __init__(self, x, y, width=400, height=10, initial_value=0.5, min_value=0.0, max_value=1.0, label = None):
+    def __init__(self, x, y, width=400, height=10, initial_value=0.5, min_value=0.0, max_value=1.0, label = None, settings = None):
         """Initialize the slider with its position, size, and initial value."""
+        self.settings = settings
         self.rect = pygame.Rect(x, y, width, height)
-        self.value = initial_value  # Current value of the slider (between min_value and max_value)
+        self.value = self.settings.volume  # Current value of the slider (between min_value and max_value)
         self.min_value = min_value  # Minimum value of the slider
         self.max_value = max_value  # Maximum value of the slider
         self.handle_radius = 10  # Radius of the slider handle (circle)
@@ -132,6 +134,105 @@ class Slider:
     def get_value(self):
         """Get the current value of the slider."""
         return self.value
+
+
+class CheckBox:
+    def __init__(self, x, y, size=20, initial_state=False, label=None , settings = None):
+        """Initialize the checkbox with its position, size, and initial state."""
+        self.settings = settings
+        self.font = pygame.font.Font('fonts/Gamer.ttf', 40)
+        self.label = label  # Label text
+        self.text_surface = self.font.render(self.label, True, (180, 180, 180))
+        self.text_rect = self.text_surface.get_rect(x=x, y=y)
+        self.rect = pygame.Rect(x+192.5 , y+3, size, size)
+        self.checked = initial_state  # Current state of the checkbox (True or False)
+        self.clicked = False  # Track if the checkbox was clicked to prevent rapid toggling
+
+    def render(self, screen, mouse_cursor, mouse_pressed):
+        """Render the checkbox and handle mouse interaction."""
+        # Draw the label text above the checkbox
+        screen.blit(self.text_surface, self.text_rect)
+
+        # Draw the checkbox border
+        pygame.draw.rect(screen, (255, 255, 255), self.rect, 2)
+
+        # Fill the checkbox if checked
+        if self.checked:
+            pygame.draw.rect(screen, (255, 255, 255), self.rect.inflate(-4, -4))
+
+        # Check for interaction with debouncing
+        if self.rect.collidepoint(mouse_cursor):
+            if mouse_pressed and not self.clicked:
+                self.checked = not self.checked  # Toggle state
+                self.clicked = True  # Prevent multiple toggles per click
+            elif not mouse_pressed:
+                self.clicked = False  # Reset click state when mouse is released
+
+    def is_checked(self):
+        """Return whether the checkbox is checked or not."""
+        return self.checked
+
+
+class DropMenu:
+    def __init__(self, x, y, width=200, height=40, options=None, labels=None, label=None, settings=None):
+        """Initialize the dropdown menu with position, size, options, label, and settings instance."""
+        self.settings = settings  # Pass the Settings instance
+        self.settings.load_settings()
+        self.rect = pygame.Rect(x + 140, y, width, height)
+        self.options = options if options else []  # List of dropdown options
+        self.selected_option = self.settings.difficulty  # Default selection
+        self.is_open = False  # Dropdown state
+        self.font = pygame.font.Font('fonts/Gamer.ttf', 40)
+        self.label = label
+        self.labels = labels
+        self.label_surface = self.font.render(self.label, True, (180, 180, 180))
+        self.label_rect = self.label_surface.get_rect(x=x, y=y)
+        self.option_height = height  # Height of each dropdown item
+
+
+    def text_label(self, option):
+        """Return the label for the selected option."""
+        if self.labels:
+            return self.labels[int(option) - 1]
+        return option
+
+    def render(self, screen, mouse_cursor, mouse_pressed):
+        """Render the dropdown menu and handle interactions."""
+        # Draw the header text
+        screen.blit(self.label_surface, self.label_rect)
+
+        # Draw the main button (collapsed state)
+        pygame.draw.rect(screen, (100, 100, 100), self.rect)
+        text_surface = self.font.render(self.text_label(self.selected_option), True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=self.rect.center)
+        screen.blit(text_surface, text_rect)
+
+        # Draw the dropdown options if open
+        if self.is_open:
+            for index, option in enumerate(self.options):
+                option_rect = pygame.Rect(self.rect.x, self.rect.y + (index + 1) * self.option_height, self.rect.width,
+                                          self.option_height)
+                pygame.draw.rect(screen, (80, 80, 80), option_rect)
+                option_text = self.font.render(self.text_label(option), True, (255, 255, 255))
+                option_text_rect = option_text.get_rect(center=option_rect.center)
+                screen.blit(option_text, option_text_rect)
+
+                # Check for clicks on dropdown options
+                if option_rect.collidepoint(mouse_cursor) and mouse_pressed:
+                    self.selected_option = option
+                    self.is_open = False  # Close dropdown after selection
+
+                    # Update the settings based on the option selected
+                    #if self.label == "Difficulty":
+                    #    self.settings.set_difficulty(int(option))
+
+        # Toggle dropdown when clicking the main button (only if cursor is directly over the button)
+        if self.rect.collidepoint(mouse_cursor) and mouse_pressed:
+            self.is_open = not self.is_open  # Toggle open/close only when the main button is clicked
+
+    def get_selected_option(self):
+        """Return the currently selected option."""
+        return self.selected_option
 
 
 class Block(pygame.sprite.Sprite):
@@ -188,6 +289,11 @@ class Tetromino:
         # new tetromino
         self.create_new_tetromino = create_new_tetromino
 
+        # settings
+        self.settings = Settings()
+        self.settings.load_settings()
+        self.sfx = self.settings.sound_effects
+
     # collisions
 
     def next_move_horizontal_collide(self,blocks,amount):
@@ -207,7 +313,8 @@ class Tetromino:
                 block.pos.y += 1
         else:
             for block in self.blocks:
-                LANDING_SOUND.play()
+                if self.sfx:
+                    LANDING_SOUND.play()
                 self.field_data[int(block.pos.y)][int(block.pos.x)] = block
             self.create_new_tetromino()
 
@@ -286,31 +393,19 @@ class Timer:
                 self.activate()
 
 
-import pygame
-import pickle
 
-
-import pygame
-import pickle
 
 class Settings:
     def __init__(self):
-        # Initialize the pygame mixer
         pygame.mixer.init()
-
-        # Set default values
         self.volume = 0.5
-        self.sound_effects_enabled = True  # Set to True to enable sound effects, False to disable
-        self.difficulty = 3  # Default difficulty is 3 (out of 5)
-
-        # Set the music volume
+        self.sound_effects = True
+        self.difficulty = 1
+        self.highscore = 0  # Initialize the highscore
         pygame.mixer.music.set_volume(self.volume)
 
-        # Example sound effect (optional - you can load your own sound effects)
-        #self.sound_effect = pygame.mixer.Sound("your_sound_effect_file.wav")
-
     def adjust_volume(self, volume_level):
-        """Adjust the music volume level. Volume level should be between 0.0 and 1.0."""
+        """Adjust the music volume level."""
         if 0.0 <= volume_level <= 1.0:
             self.volume = volume_level
             pygame.mixer.music.set_volume(self.volume)
@@ -320,53 +415,76 @@ class Settings:
 
     def toggle_sound_effects(self):
         """Toggle sound effects on or off."""
-        self.sound_effects_enabled = not self.sound_effects_enabled
-        state = "enabled" if self.sound_effects_enabled else "disabled"
+        self.sound_effects = not self.sound_effects
+        state = "enabled" if self.sound_effects else "disabled"
+        self.save_settings()
         print(f"Sound Effects {state}")
 
     def set_difficulty(self, difficulty_level):
-        """Set the difficulty level. Difficulty level should be between 1 and 5."""
-        if 1 <= difficulty_level <= 5:
+        """Set the difficulty level."""
+        if 1 <= difficulty_level <= 4:
             self.difficulty = difficulty_level
+            self.save_settings()
             print(f"Difficulty set to {self.difficulty}")
         else:
-            print("Difficulty level must be between 1 and 5.")
+            print("Difficulty level must be between 1 and 4.")
+
+    def update_highscore(self, score):
+        """Update the highscore if the current score is higher."""
+        if score > self.highscore:
+            self.highscore = score
+            self.save_settings()
+            print(f"New Highscore: {self.highscore}")
+        else:
+            print(f"Highscore remains: {self.highscore}")
 
     def save_settings(self, filename="settings.pkl"):
         """Export settings to a binary pickle file."""
         settings_dict = {
             "volume": self.volume,
-            "sound_effects_enabled": self.sound_effects_enabled,
-            "difficulty": self.difficulty
+            "sound_effects_enabled": self.sound_effects,
+            "difficulty": self.difficulty,
+            "highscore": self.highscore  # Save the highscore
         }
-
-        with open(filename, "wb") as f:
-            pickle.dump(settings_dict, f)
-        print(f"Settings saved to {filename}")
+        try:
+            with open(filename, "wb") as f:
+                pickle.dump(settings_dict, f)
+            print(f"Settings saved to {filename}")
+        except Exception as e:
+            print(f"Error saving settings: {e}")
 
     def load_settings(self, filename="settings.pkl"):
         """Load settings from a pickle file."""
+        if not os.path.exists(filename):
+            print("Settings file not found. Creating default settings file.")
+            self.create_default_settings(filename)
+            return
+
         try:
             with open(filename, "rb") as f:
                 settings_dict = pickle.load(f)
                 self.volume = settings_dict.get("volume", 0.5)
-                self.sound_effects_enabled = settings_dict.get("sound_effects_enabled", True)
-                self.difficulty = settings_dict.get("difficulty", 3)
-
+                self.sound_effects = settings_dict.get("sound_effects_enabled", True)
+                self.difficulty = settings_dict.get("difficulty", 1)
+                self.highscore = settings_dict.get("highscore", 0)  # Load highscore
                 pygame.mixer.music.set_volume(self.volume)
+                print(
+                    f"Settings loaded. Volume: {self.volume * 100}%, Sound Effects: {'Enabled' if self.sound_effects else 'Disabled'}, Difficulty: {self.difficulty}, Highscore: {self.highscore}")
+        except (FileNotFoundError, pickle.UnpicklingError) as e:
+            print(f"Error loading settings: {e}")
+            print("Using default values.")
 
-                print(f"Settings loaded. Volume: {self.volume * 100}%, Sound Effects: {'Enabled' if self.sound_effects_enabled else 'Disabled'}, Difficulty: {self.difficulty}")
-        except FileNotFoundError:
-            print(f"No settings file found. Using default values: Volume {self.volume * 100}%, Sound Effects: {'Enabled' if self.sound_effects_enabled else 'Disabled'}, Difficulty: {self.difficulty}")
-
-
-
-
-
-
-
-
-
-
-
-
+    def create_default_settings(self, filename="settings.pkl"):
+        """Create a default settings file."""
+        default_settings = {
+            "volume": 0.5,
+            "sound_effects_enabled": True,
+            "difficulty": 1,
+            "highscore": 0
+        }
+        try:
+            with open(filename, "wb") as f:
+                pickle.dump(default_settings, f)
+            print(f"Default settings created and saved to {filename}.")
+        except Exception as e:
+            print(f"Error creating default settings: {e}")

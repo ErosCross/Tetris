@@ -1,4 +1,5 @@
 import pygame, sys
+import pickle
 from src.objects.objects import *
 import time
 from random import choice
@@ -17,8 +18,8 @@ SCREEN_HEIGHT = 800
 clock = pygame.time.Clock()
 
 # Set the window icon
-# icon = pygame.image.load('images/game-icon.png')
-icon = pygame.image.load('images/shrektetrisreal.png')
+icon = pygame.image.load('images/game-icon.png')
+#icon = pygame.image.load('images/shrektetrisreal.png')
 pygame.display.set_icon(icon)
 
 # Load sound effect for button clicks
@@ -146,6 +147,8 @@ class StartMenu:
 
 class Game:
     def __init__(self):
+        # Initialize settings
+        self.settings = Settings()  # Instance of the Settings class
         # Initialize the game class with necessary attributes and objects
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))  # Set up the main game window
         self.score = 0  # Initialize the score to 0
@@ -180,15 +183,22 @@ class Game:
             self.create_new_tetromino,
             self.field_data
         )
+        # Load settings from file
+        self.settings.load_settings()  # Make sure to load settings on game start
 
         # Initialize timers for tetromino movement
         self.timers = {
-            'vertical move': Timer(UPDATE_START_SPEED, True, self.move_down),  # Timer for automatic downward movement
-            'horizontal move': Timer(MOVE_WAIT_TIME), # Timer for horizontal movement delay
-            'rotate' : Timer(ROTATE_WAIT_TIME) # Timer for rotations
+            'vertical move': Timer(UPDATE_START_SPEED - self.settings.difficulty * 80, True, self.move_down),  # Timer for automatic downward movement
+            'horizontal move': Timer(MOVE_WAIT_TIME - self.settings.difficulty * 15), # Timer for horizontal movement delay
+            'rotate' : Timer(ROTATE_WAIT_TIME - self.settings.difficulty*5) # Timer for rotations
 
         }
         self.timers['vertical move'].activate()  # Activate the vertical movement timer
+
+        # Music settings
+        if self.settings.volume:
+            music.set_volume(self.settings.volume)
+            music.play(loops=1)
 
 
 
@@ -223,6 +233,9 @@ class Game:
 
 
     def game_over(self):
+        # Update the highscore if the current score is greater
+        self.settings.update_highscore(self.score)
+        music.stop()
         menu = GameOverMenu()  # Create an instance of Gamer over
         menu.show_menu()
 
@@ -281,7 +294,7 @@ class Game:
 
     def calc_score(self):
         # Add score to our Score_Addition
-        self.score += SCORE_ADDITION
+        self.score += (SCORE_ADDITION * self.settings.difficulty)
 
 
     def display_next_tetromino(self, sur):
@@ -342,7 +355,7 @@ class Game:
         # creating the texts on the screen
         time_text = self.box_font.render(self.display_stopwatch(), True, (180, 180, 180))
         score_text = self.box_font.render(str(self.score), True, (180, 180, 180))
-        highscore_text = self.box_font.render("00000", True, (180, 180, 180))
+        highscore_text = self.box_font.render(str(self.settings.highscore), True, (180, 180, 180))  # Use settings highscore
         return_text = self.box_font.render("RETURN", True, (212, 178, 178))
 
 
@@ -473,6 +486,8 @@ class Game:
 class GameOverMenu:
     def __init__(self):
         # Initialize the start menu screen
+        self.settings = Settings()
+        self.settings.load_settings()
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.header_font = pygame.font.Font('fonts/Gamer.ttf', 170)  # Main header font
         self.button_font = pygame.font.Font('fonts/Gamer.ttf', 80)  # Button font
@@ -573,7 +588,8 @@ class GameOverMenu:
 
             # Apply the fade-in effect
             if self.fade:
-                game_over_sound.play()
+                if self.settings.sound_effects:
+                    game_over_sound.play()
                 pygame.time.delay(100)  # Add a small delay
                 self.fade_out(duration=2)
                 self.fade = False
@@ -609,6 +625,7 @@ class OptionsMenu:
         """Initialize the options menu."""
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.settings = Settings()  # Settings object to control game settings (volume, difficulty, etc.)
+        self.settings.load_settings()
         self.click_sound = click_sound  # Sound to play on button click
         self.clock = clock  # To control the frame rate
         self.header_font = pygame.font.Font('fonts/Gamer.ttf', 200)  # Main header font
@@ -617,7 +634,38 @@ class OptionsMenu:
         pygame.display.set_caption('TETRIS - BY AMIT SHAVIV')  # Set the game window title
 
         # Initialize the slider
-        self.volume_slider = Slider(x=(SCREEN_WIDTH / 2) - 200, y=SCREEN_HEIGHT / 2 + 50, width=400, height=10, initial_value=self.settings.volume , label = "Music Volume")
+        self.volume_slider = Slider(x=(SCREEN_WIDTH / 2) - 200, y=SCREEN_HEIGHT / 2 - 100, width=400, height=10, initial_value=self.settings.volume , label = "Music Volume",settings=self.settings)
+        # Initialize the sound effects checkbox
+        self.sound_checkbox = CheckBox(x=(SCREEN_WIDTH / 2) - 200, y=SCREEN_HEIGHT / 2 - 70, size=30,
+                                       initial_state=self.settings.sound_effects, label="Sound Effects",settings=self.settings)
+        # Difficulty options (1 to 4)
+        self.difficulty_options = [str(i) for i in range(1, 5)]
+        # Difficulty options (labels)
+        self.difficulty_options_labels = [
+            "Easy",  # Difficulty 1
+            "Medium",  # Difficulty 2
+            "Hard",  # Difficulty 3
+            "Impossible"  # Difficulty 4
+
+        ]
+
+        # Create DropMenu instance for difficulty
+        self.difficulty_menu = DropMenu(x=(SCREEN_WIDTH / 2) - 200, y=SCREEN_HEIGHT / 2 -10, options=self.difficulty_options,labels=self.difficulty_options_labels, label="Difficulty",settings=self.settings)
+
+    def handle_checkbox_interaction(self, mouse_cursor, mouse_buttons):
+        """Handle checkbox interaction."""
+        self.sound_checkbox.render(self.screen, mouse_cursor, mouse_buttons[0])
+
+        # Update settings based on checkbox state
+        self.settings.sound_effects = self.sound_checkbox.is_checked()
+
+    def handle_difficulty_interaction(self, mouse_cursor, mouse_buttons):
+        """Handle dropdown menu interaction for difficulty."""
+        self.difficulty_menu.render(self.screen, mouse_cursor, mouse_buttons[0])
+
+        # Update settings based on the selected difficulty
+        selected_difficulty = int(self.difficulty_menu.get_selected_option())
+        self.settings.set_difficulty(selected_difficulty)
 
     def render_button(self, text, font, color, center_position):
         """Render button text and return its surface and rectangle."""
@@ -644,7 +692,7 @@ class OptionsMenu:
         mouse_buttons = pygame.mouse.get_pressed()  # Check if mouse buttons are pressed
 
         # Define button positions and their properties
-        return_button_center = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 200)
+        return_button_center = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 250)
         buttons = [
             {"text": "RETURN BACK", "center": return_button_center, "color": (180, 180, 180),
              "hover_color": (47, 79, 79)}
@@ -664,6 +712,7 @@ class OptionsMenu:
                 if mouse_buttons[0]:  # Left mouse button is clicked
                     click_sound.play()
                     if button["text"] == "RETURN BACK":
+                        self.settings.save_settings()
                         self.return_back()
 
             # Draw the button text
@@ -681,6 +730,9 @@ class OptionsMenu:
         self.screen.fill((25, 25, 25))  # Gray background
         self.draw_buttons()
         self.handle_slider_interaction(pygame.mouse.get_pos(), pygame.mouse.get_pressed())  # Handle slider interactions
+        self.handle_checkbox_interaction(pygame.mouse.get_pos(),
+                                         pygame.mouse.get_pressed())  # Handle checkbox interactions
+        self.handle_difficulty_interaction(pygame.mouse.get_pos(), pygame.mouse.get_pressed()) # Handle difficulty interactions
 
     def show_menu(self):
         """Main loop for displaying the options menu."""
@@ -689,6 +741,7 @@ class OptionsMenu:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:  # Handle quit event
                     running = False
+                    self.settings.save_settings()
                     pygame.quit()  # Quit pygame after exiting the loop
                     sys.exit()  # Exit the program
 
@@ -709,20 +762,7 @@ class OptionsMenu:
         menu = StartMenu()
         menu.show_menu()
 
-    def adjust_music_volume(self):
-        """Adjust the music volume."""
-        new_volume = self.settings.volume + 0.1 if self.settings.volume < 1.0 else 0.0
-        self.settings.adjust_volume(new_volume)
 
-    def adjust_sfx_volume(self):
-        """Adjust the sound effects volume."""
-        new_sfx_volume = self.settings.sound_effects_volume + 0.1 if self.settings.sound_effects_volume < 1.0 else 0.0
-        self.settings.adjust_sound_effects_volume(new_sfx_volume)
-
-    def change_difficulty(self):
-        """Change the game difficulty."""
-        new_difficulty = self.settings.difficulty + 1 if self.settings.difficulty < 5 else 1
-        self.settings.set_difficulty(new_difficulty)
 
 
 
