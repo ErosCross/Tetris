@@ -198,7 +198,7 @@ class Game:
         # Music settings
         if self.settings.volume:
             music.set_volume(self.settings.volume)
-            music.play(loops=1)
+            music.play(loops=-1)
 
 
 
