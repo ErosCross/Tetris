@@ -3,6 +3,7 @@ import os
 from pygame.image import load
 from os import path
 import pickle
+from cryptography.fernet import Fernet
 
 
 pygame.mixer.init()  # Initialize the mixer module.
@@ -404,6 +405,22 @@ class Settings:
         self.highscore = 0  # Initialize the highscore
         pygame.mixer.music.set_volume(self.volume)
 
+        # Generate or load encryption key
+        self.key = self.load_or_generate_key()
+        self.fernet = Fernet(self.key)
+
+    def load_or_generate_key(self, key_filename="secret.key"):
+        """Load the encryption key or generate a new one if not found."""
+        if os.path.exists(key_filename):
+            with open(key_filename, "rb") as key_file:
+                return key_file.read()
+        else:
+            key = Fernet.generate_key()
+            with open(key_filename, "wb") as key_file:
+                key_file.write(key)
+            print("New encryption key generated and saved.")
+            return key
+
     def adjust_volume(self, volume_level):
         """Adjust the music volume level."""
         if 0.0 <= volume_level <= 1.0:
@@ -439,22 +456,27 @@ class Settings:
             print(f"Highscore remains: {self.highscore}")
 
     def save_settings(self, filename="settings.pkl"):
-        """Export settings to a binary pickle file."""
+        """Export settings to an encrypted pickle file."""
         settings_dict = {
             "volume": self.volume,
             "sound_effects_enabled": self.sound_effects,
             "difficulty": self.difficulty,
             "highscore": self.highscore  # Save the highscore
         }
+
         try:
+            # Serialize the settings and then encrypt the data
+            serialized_data = pickle.dumps(settings_dict)
+            encrypted_data = self.fernet.encrypt(serialized_data)
+
             with open(filename, "wb") as f:
-                pickle.dump(settings_dict, f)
+                f.write(encrypted_data)
             print(f"Settings saved to {filename}")
         except Exception as e:
             print(f"Error saving settings: {e}")
 
     def load_settings(self, filename="settings.pkl"):
-        """Load settings from a pickle file."""
+        """Load encrypted settings from a pickle file."""
         if not os.path.exists(filename):
             print("Settings file not found. Creating default settings file.")
             self.create_default_settings(filename)
@@ -462,20 +484,25 @@ class Settings:
 
         try:
             with open(filename, "rb") as f:
-                settings_dict = pickle.load(f)
-                self.volume = settings_dict.get("volume", 0.5)
-                self.sound_effects = settings_dict.get("sound_effects_enabled", True)
-                self.difficulty = settings_dict.get("difficulty", 1)
-                self.highscore = settings_dict.get("highscore", 0)  # Load highscore
-                pygame.mixer.music.set_volume(self.volume)
-                print(
-                    f"Settings loaded. Volume: {self.volume * 100}%, Sound Effects: {'Enabled' if self.sound_effects else 'Disabled'}, Difficulty: {self.difficulty}, Highscore: {self.highscore}")
-        except (FileNotFoundError, pickle.UnpicklingError) as e:
+                encrypted_data = f.read()
+
+            # Decrypt the data and then deserialize it
+            decrypted_data = self.fernet.decrypt(encrypted_data)
+            settings_dict = pickle.loads(decrypted_data)
+
+            self.volume = settings_dict.get("volume", 0.5)
+            self.sound_effects = settings_dict.get("sound_effects_enabled", True)
+            self.difficulty = settings_dict.get("difficulty", 1)
+            self.highscore = settings_dict.get("highscore", 0)  # Load highscore
+            pygame.mixer.music.set_volume(self.volume)
+            print(
+                f"Settings loaded. Volume: {self.volume * 100}%, Sound Effects: {'Enabled' if self.sound_effects else 'Disabled'}, Difficulty: {self.difficulty}, Highscore: {self.highscore}")
+        except (FileNotFoundError, pickle.UnpicklingError, Exception) as e:
             print(f"Error loading settings: {e}")
             print("Using default values.")
 
     def create_default_settings(self, filename="settings.pkl"):
-        """Create a default settings file."""
+        """Create a default settings file with encrypted data."""
         default_settings = {
             "volume": 0.5,
             "sound_effects_enabled": True,
@@ -483,8 +510,12 @@ class Settings:
             "highscore": 0
         }
         try:
+            # Serialize the settings and then encrypt the data
+            serialized_data = pickle.dumps(default_settings)
+            encrypted_data = self.fernet.encrypt(serialized_data)
+
             with open(filename, "wb") as f:
-                pickle.dump(default_settings, f)
+                f.write(encrypted_data)
             print(f"Default settings created and saved to {filename}.")
         except Exception as e:
             print(f"Error creating default settings: {e}")
